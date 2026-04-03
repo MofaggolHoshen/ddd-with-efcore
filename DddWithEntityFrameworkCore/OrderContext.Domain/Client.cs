@@ -1,0 +1,42 @@
+﻿using OrderContext.Domain;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Text;
+
+namespace OrderContext;
+
+public class Client
+{
+    [Key]
+    public Guid Id { get; private set; } 
+    public string Name { get; private set; }
+    public Email Email { get; private set; } 
+    public DateTime CreatedAt { get; private set; }
+
+    public Client(Guid id, string name, Email email)
+    {
+        Id = id != Guid.Empty ? id : throw new ArgumentException("Customer ID cannot be empty!");
+        Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException("Name cannot be empty!");
+        Email = email ?? throw new ArgumentNullException(nameof(email));
+        CreatedAt = DateTime.UtcNow;
+    }
+
+    public Client(string name, Email email)
+        : this(Guid.NewGuid(), name, email)
+    {
+    }
+
+
+    public void UpdateName(string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            throw new ArgumentException("Name cannot be empty!");
+        Name = newName;
+    }
+
+    public void UpdateEmail(Email newEmail)
+    {
+        Email = newEmail ?? throw new ArgumentNullException(nameof(newEmail));
+    }
+}

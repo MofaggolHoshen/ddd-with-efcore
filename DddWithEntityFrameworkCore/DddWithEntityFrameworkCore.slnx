@@ -1,1 +1,5 @@
-<Solution />
+<Solution>
+  <Project Path="OrderContext.Domain/OrderContext.Domain.csproj" />
+  <Project Path="OrderContext.Infratructure/OrderContext.Infratructure.csproj" />
+  <Project Path="OrderContext.Tests/OrderContext.Tests.csproj" Id="6bfbf61c-a640-40ef-912d-234f971fdf01" />
+</Solution>
