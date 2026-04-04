@@ -18,8 +18,8 @@ A $100 bill in your wallet and a $100 bill in mine are the same value—they're 
 ### 1. No Identity
 ```csharp
 // Two emails with same value are identical
-var email1 = Email.Create("john@example.com");
-var email2 = Email.Create("john@example.com");
+var email1 = Email.Create("mofaggol.hoshen@db.com");
+var email2 = Email.Create("mofaggol.hoshen@db.com");
 // email1 equals email2 ✅
 ```
 
@@ -132,7 +132,7 @@ public static Email Create(string email)
     return new Email(email);
 }
 
-var email = Email.Create("john@example.com"); // Always valid!
+var email = Email.Create("mofaggol.hoshen@db.com"); // Always valid!
 ```
 
 ### 2. Immutability Pattern
@@ -162,12 +162,12 @@ public class Email
 **Why immutability matters:**
 ```csharp
 // With mutable value object (BAD)
-var email = new Email { Value = "john@example.com" };
+var email = new Email { Value = "mofaggol.hoshen@db.com" };
 client.Email = email;
 email.Value = "hacker@example.com";  // Oops! Client's email changed unexpectedly!
 
 // With immutable value object (GOOD)
-var email = Email.Create("john@example.com");
+var email = Email.Create("mofaggol.hoshen@db.com");
 client.Email = email;
 // email.Value = "hacker@example.com";  ❌ Won't compile - immutable!
 ```
@@ -611,7 +611,7 @@ public class Client
 }
 
 // Benefits:
-var email = Email.Create("john@example.com");        // Validated ✅
+var email = Email.Create("mofaggol.hoshen@db.com");        // Validated ✅
 var balance = Money.Create(1000, "USD");             // Validated ✅
 var phone = PhoneNumber.Create("555-1234");          // Validated ✅
 
@@ -639,7 +639,7 @@ public class Email
     public string Value { get; set; }  // Setter!
 }
 
-var email = new Email { Value = "john@example.com" };
+var email = new Email { Value = "mofaggol.hoshen@db.com" };
 email.Value = "changed@example.com";  // Changed! Not immutable!
 ```
 
@@ -706,11 +706,11 @@ public class EmailTests
     public void Create_WithValidEmail_ReturnsEmail()
     {
         // Arrange & Act
-        var email = Email.Create("john@example.com");
+        var email = Email.Create("mofaggol.hoshen@db.com");
 
         // Assert
         Assert.NotNull(email);
-        Assert.Equal("john@example.com", email.Value);
+        Assert.Equal("mofaggol.hoshen@db.com", email.Value);
     }
 
     [Theory]
@@ -738,8 +738,8 @@ public class EmailTests
     public void Equals_WithSameValue_ReturnsTrue()
     {
         // Arrange
-        var email1 = Email.Create("john@example.com");
-        var email2 = Email.Create("john@example.com");
+        var email1 = Email.Create("mofaggol.hoshen@db.com");
+        var email2 = Email.Create("mofaggol.hoshen@db.com");
 
         // Act & Assert
         Assert.Equal(email1, email2);
