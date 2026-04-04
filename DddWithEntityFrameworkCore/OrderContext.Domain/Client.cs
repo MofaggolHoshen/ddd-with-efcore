@@ -20,8 +20,9 @@ public class Client
     }
     public Client(Guid id, string name, Email email)
     {
-        Id = id != Guid.Empty ? id : throw new ArgumentException("Customer ID cannot be empty!");
-        Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException("Name cannot be empty!");
+        Id = id != Guid.Empty ? id : throw new ArgumentException("Client ID is empty!");
+
+        Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException("Name is empty!");
         Email = email ?? throw new ArgumentNullException(nameof(email));
         CreatedAt = DateTime.UtcNow;
     }
