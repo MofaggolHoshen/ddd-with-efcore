@@ -1,4 +1,13 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="../README.md" />
+    <File Path="docs/Aggregate.md" />
+    <File Path="docs/DomainEvent.md" />
+    <File Path="docs/DomainService.md" />
+    <File Path="docs/Entity.md" />
+    <File Path="docs/Repository.md" />
+    <File Path="docs/ValueObject.md" />
+  </Folder>
   <Project Path="OrderContext.Domain/OrderContext.Domain.csproj" />
   <Project Path="OrderContext.Infratructure/OrderContext.Infratructure.csproj" />
   <Project Path="OrderContext.Tests/OrderContext.Tests.csproj" Id="6bfbf61c-a640-40ef-912d-234f971fdf01" />

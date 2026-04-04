@@ -18,18 +18,30 @@ public class Client
     {
         
     }
-    public Client(Guid id, string name, Email email)
+    private Client(Guid id, string name, Email email)
     {
-        Id = id != Guid.Empty ? id : throw new ArgumentException("Client ID is empty!");
-
-        Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException("Name is empty!");
-        Email = email ?? throw new ArgumentNullException(nameof(email));
+        Id = id;
+        Name = name;
+        Email = email;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public Client(string name, Email email)
+    private Client(string name, Email email)
         : this(Guid.NewGuid(), name, email)
     {
+    }
+
+    public static Client Create(string name, Email email)
+    {
+        // Validate the client's name
+        if(string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name cannot be empty!");
+
+        if (email == null)
+            throw new ArgumentNullException(nameof(email));
+
+        return new Client(name, email);
+
     }
 
 

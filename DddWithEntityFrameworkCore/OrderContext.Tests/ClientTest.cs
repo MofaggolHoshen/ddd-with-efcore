@@ -18,11 +18,11 @@ public class ClientTest
     public void CreateClient_Succeeds()
     {
         // Arrange
-        var email = new Email("Mofaggol@bd.com");
+        var email = Email.Create("Mofaggol@bd.com");
         var name = "Mofaggol Hoshen";
 
         // Act
-        var clinet = new Client(name, email);
+        var clinet = Client.Create(name, email);
 
         // Assert
         Assert.NotNull(clinet);
@@ -38,8 +38,8 @@ public class ClientTest
     {
         // Arrange
         using var context = CreateDbContext();
-        var email = new Email("Mofaggol.Hoshen@bd.com");
-        var client = new Client("Mofaggol Hoshen", email);
+        var email = Email.Create("Mofaggol.Hoshen@bd.com");
+        var client = Client.Create("Mofaggol Hoshen", email);
 
         // Act
         context.Clients.Add(client);
@@ -59,13 +59,13 @@ public class ClientTest
     {
         // Arrange
         using var context = CreateDbContext();
-        var originalEmail = new Email("Mofaggol.hoshen@bd.com");
-        var client = new Client("Mofaggol Hoshen", originalEmail);
+        var originalEmail = Email.Create("Mofaggol.hoshen@bd.com");
+        var client = Client.Create("Mofaggol Hoshen", originalEmail);
         context.Clients.Add(client);
         context.SaveChanges();
 
         // Act
-        var newEmail = new Email("Hoshen.Mofaggol@bd.com");
+        var newEmail = Email.Create("Hoshen.Mofaggol@bd.com");
         client.UpdateEmail(newEmail);
         context.SaveChanges();
 

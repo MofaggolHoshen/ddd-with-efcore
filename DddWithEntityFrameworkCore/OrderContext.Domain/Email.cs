@@ -14,9 +14,19 @@ public class Email
         _value = null!;
     }
 
-    public Email(string value)
+    private Email(string value)
     {
         _value = value;
+    }
+
+    public static Email Create(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email cannot be empty!");
+        if (!email.Contains('@'))
+            throw new ArgumentException("Invalid email format!");
+
+        return new Email(email);
     }
 
 }
