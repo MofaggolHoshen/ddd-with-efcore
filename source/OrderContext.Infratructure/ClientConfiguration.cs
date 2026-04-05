@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OrderContext.Domain;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace OrderContext.Infratructure;
 
@@ -13,8 +10,19 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
     {
         builder.HasKey(c => c.Id);
 
-        builder.OwnsOne<Email>(c => c.Email);
+        builder.Property(c => c.Name)
+            .HasMaxLength(200)
+            .IsRequired();
 
-        builder.Navigation(c => c.Email).IsRequired();
+        builder.Property(c => c.CreatedAt)
+            .IsRequired();
+
+        // Configure Email using Value Conversion
+        builder.Property(c => c.Email)
+            .HasConversion(
+                email => email.Value,
+                value => Email.FromDatabase(value))
+            .HasMaxLength(254)
+            .IsRequired();
     }
 }

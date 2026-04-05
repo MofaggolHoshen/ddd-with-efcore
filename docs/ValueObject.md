@@ -66,30 +66,74 @@ public static Email Create(string email)
 
 ## 💻 Implementation in This Project
 
+### The ValueObject Base Class
+
+```csharp
+namespace OrderContext.Domain.Common;
+
+public abstract class ValueObject
+{
+    protected abstract IEnumerable<object> GetEqualityComponents();
+
+    public override bool Equals(object? obj)
+    {
+        if (obj == null || obj.GetType() != GetType())
+            return false;
+
+        var other = (ValueObject)obj;
+        return GetEqualityComponents().SequenceEqual(other.GetEqualityComponents());
+    }
+
+    public override int GetHashCode()
+    {
+        return GetEqualityComponents()
+            .Aggregate(1, (current, obj) =>
+            {
+                unchecked
+                {
+                    return current * 23 + (obj?.GetHashCode() ?? 0);
+                }
+            });
+    }
+
+    public static bool operator ==(ValueObject? left, ValueObject? right)
+    {
+        if (left is null && right is null) return true;
+        if (left is null || right is null) return false;
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ValueObject? left, ValueObject? right)
+    {
+        return !(left == right);
+    }
+}
+```
+
 ### The Email Value Object
 
 ```csharp
+using OrderContext.Domain.Common;
+using System.Text.RegularExpressions;
+
 namespace OrderContext.Domain;
 
-public class Email
+public class Email : ValueObject
 {
-    // 1. IMMUTABLE FIELD - readonly ensures immutability
+    // 1. COMPILED REGEX - For efficient email validation
+    private static readonly Regex EmailRegex = new Regex(
+       @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+       RegexOptions.Compiled | RegexOptions.IgnoreCase
+   );
+
+    // 2. IMMUTABLE FIELD - readonly ensures immutability
     private readonly string _value;
 
-    // 2. READ-ONLY PROPERTY - no setter
+    // 3. READ-ONLY PROPERTY - no setter
     public string Value => _value;
 
-    // 3. PARAMETERLESS CONSTRUCTOR - For EF Core only
-    private Email()
-    {
-        _value = null!;  // Required for EF Core deserialization
-    }
-
     // 4. PRIVATE CONSTRUCTOR - Prevents external instantiation
-    private Email(string value)
-    {
-        _value = value;
-    }
+    private Email(string value) => _value = value;
 
     // 5. FACTORY METHOD - Only way to create valid Email
     public static Email Create(string email)
@@ -97,6 +141,30 @@ public class Email
         // VALIDATION: Ensures only valid emails exist
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email cannot be empty!");
+
+        // NORMALIZATION: Trim and lowercase
+        email = email.Trim().ToLowerInvariant();
+
+        // FORMAT VALIDATION: Using compiled regex
+        if (!EmailRegex.IsMatch(email))
+            throw new ArgumentException("Invalid email format!");
+
+        // LENGTH VALIDATION: RFC 5321 limit
+        if (email.Length > 254)
+            throw new ArgumentException("Email exceeds maximum length!");
+
+        return new Email(email);
+    }
+
+    // 6. EF CORE MATERIALIZATION - Skips validation for database reads
+    public static Email FromDatabase(string value) => new Email(value);
+
+    // 7. VALUE EQUALITY - Inherited from ValueObject base class
+    protected override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return _value;
+    }
+}
 
         if (!email.Contains('@'))
             throw new ArgumentException("Invalid email format!");
@@ -311,10 +379,11 @@ public static Email Create(string email)
 }
 ```
 
-### 3. Validation with Regex (Advanced)
+### 3. Validation with Regex (Current Implementation)
 
 ```csharp
 using System.Text.RegularExpressions;
+using OrderContext.Domain.Common;
 
 public class Email : ValueObject
 {
@@ -344,82 +413,111 @@ public class Email : ValueObject
         return new Email(email);
     }
 
+    // For EF Core materialization - trusted data, no validation needed
+    public static Email FromDatabase(string value) => new Email(value);
+
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return _value;
     }
 }
+}
 ```
 
-## 🗄️ EF Core Mapping with `OwnsOne`
+## 🗄️ EF Core Mapping with Value Conversion
 
 ### The Configuration
 
 ```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using OrderContext.Domain;
+
+namespace OrderContext.Infratructure;
+
 public class ClientConfiguration : IEntityTypeConfiguration<Client>
 {
     public void Configure(EntityTypeBuilder<Client> builder)
     {
         builder.HasKey(c => c.Id);
 
-        // OwnsOne: Email is owned by Client (no separate table)
-        builder.OwnsOne<Email>(c => c.Email, email =>
-        {
-            // Map the private field
-            email.Property(e => e.Value)
-                .HasColumnName("Email")  // Column name in Client table
-                .HasMaxLength(254)       // Database constraint
-                .IsRequired();           // NOT NULL constraint
-        });
+        builder.Property(c => c.Name)
+            .HasMaxLength(200)
+            .IsRequired();
 
-        // Navigation is required
-        builder.Navigation(c => c.Email).IsRequired();
-    }
-}
-```
+        builder.Property(c => c.CreatedAt)
+            .IsRequired();
 
-### Database Schema Result
-
-```sql
-CREATE TABLE Clients (
-    Id UNIQUEIDENTIFIER PRIMARY KEY,
-    Name NVARCHAR(100),
-    Email NVARCHAR(254) NOT NULL,  -- Email value inline
-    CreatedAt DATETIME2
-)
-```
-
-**Benefits:**
-- ✅ No separate Email table
-- ✅ Value object stored inline
-- ✅ Better performance (no join)
-- ✅ Reflects domain model accurately
-
-### Alternative: Value Conversion (EF Core 2.1+)
-
-```csharp
-public class ClientConfiguration : IEntityTypeConfiguration<Client>
-{
-    public void Configure(EntityTypeBuilder<Client> builder)
-    {
-        builder.HasKey(c => c.Id);
-
-        // Value Conversion: Convert Email to/from string
+        // Configure Email using Value Conversion
         builder.Property(c => c.Email)
             .HasConversion(
-                email => email.Value,              // To database
-                value => Email.Create(value)       // From database
-            )
-            .HasColumnName("Email")
+                email => email.Value,                    // To database: Email -> string
+                value => Email.FromDatabase(value))      // From database: string -> Email
             .HasMaxLength(254)
             .IsRequired();
     }
 }
 ```
 
+### Why `FromDatabase` Instead of `Create`?
+
+```csharp
+// ❌ Using Create() - Runs validation on every database read
+builder.Property(c => c.Email)
+    .HasConversion(
+        email => email.Value,
+        value => Email.Create(value)  // Validates already-valid data!
+    );
+
+// ✅ Using FromDatabase() - Skips validation for trusted data
+builder.Property(c => c.Email)
+    .HasConversion(
+        email => email.Value,
+        value => Email.FromDatabase(value)  // Data is already validated
+    );
+```
+
+**Benefits of `FromDatabase`:**
+- ✅ Better performance (no regex validation on reads)
+- ✅ Database data is already validated (was validated on write)
+- ✅ Avoids exceptions if validation rules change
+- ✅ Clear separation of concerns
+
+### Database Schema Result
+
+```sql
+CREATE TABLE Clients (
+    Id UNIQUEIDENTIFIER PRIMARY KEY,
+    Name NVARCHAR(200) NOT NULL,
+    Email NVARCHAR(254) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL
+)
+```
+
+**Benefits:**
+- ✅ Email stored as simple string column
+- ✅ Value object abstraction in code
+- ✅ No separate Email table needed
+- ✅ Better performance (no join)
+
+### Alternative: ComplexProperty (EF Core 8+)
+
+For multi-property value objects or when you want EF Core to manage the complex type:
+
+```csharp
+// For multi-property value objects like Address
+builder.ComplexProperty(c => c.Address, addressBuilder =>
+{
+    addressBuilder.Property(a => a.Street).HasMaxLength(200).IsRequired();
+    addressBuilder.Property(a => a.City).HasMaxLength(100).IsRequired();
+    addressBuilder.Property(a => a.ZipCode).HasMaxLength(20).IsRequired();
+});
+```
+
 **When to use each:**
-- **OwnsOne**: Multi-property value objects (Address, Money)
 - **Value Conversion**: Single-property value objects (Email, PhoneNumber)
+- **ComplexProperty**: Multi-property value objects (Address, Money)
+- **OwnsOne**: When you need navigation properties or separate table option
 
 ## 🎨 Common Value Object Examples
 
@@ -699,34 +797,47 @@ public class Email
 
 ## 🧪 Testing Value Objects
 
+### Email Validation Tests
+
 ```csharp
 public class EmailTests
 {
-    [Fact]
-    public void Create_WithValidEmail_ReturnsEmail()
+    #region Validation Tests
+
+    [Theory]
+    [InlineData("test@example.com")]
+    [InlineData("user.name@domain.org")]
+    [InlineData("user+tag@example.co.uk")]
+    [InlineData("a@b.co")]
+    public void Create_WithValidEmail_ReturnsEmailInstance(string validEmail)
     {
-        // Arrange & Act
-        var email = Email.Create("mofaggol.hoshen@db.com");
+        // Act
+        var email = Email.Create(validEmail);
 
         // Assert
         Assert.NotNull(email);
-        Assert.Equal("mofaggol.hoshen@db.com", email.Value);
+        Assert.Equal(validEmail.ToLowerInvariant(), email.Value);
     }
 
     [Theory]
+    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData(null)]
-    public void Create_WithEmptyEmail_ThrowsArgumentException(string invalidEmail)
+    [InlineData("\t")]
+    public void Create_WithNullOrWhitespace_ThrowsArgumentException(string? invalidEmail)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => Email.Create(invalidEmail));
+        var exception = Assert.Throws<ArgumentException>(() => Email.Create(invalidEmail!));
+        Assert.Contains("empty", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
-    [InlineData("invalid")]
-    [InlineData("missing-at-sign.com")]
-    [InlineData("@nodomain")]
+    [InlineData("plaintext")]
+    [InlineData("@nodomain.com")]
+    [InlineData("missing@.com")]
+    [InlineData("missing@domain")]
+    [InlineData("spaces in@email.com")]
+    [InlineData("double@@at.com")]
     public void Create_WithInvalidFormat_ThrowsArgumentException(string invalidEmail)
     {
         // Act & Assert
@@ -735,14 +846,134 @@ public class EmailTests
     }
 
     [Fact]
-    public void Equals_WithSameValue_ReturnsTrue()
+    public void Create_WithEmailExceeding254Characters_ThrowsArgumentException()
     {
         // Arrange
-        var email1 = Email.Create("mofaggol.hoshen@db.com");
-        var email2 = Email.Create("mofaggol.hoshen@db.com");
+        var longLocalPart = new string('a', 250);
+        var tooLongEmail = $"{longLocalPart}@test.com";
 
         // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Email.Create(tooLongEmail));
+        Assert.Contains("maximum length", exception.Message);
+    }
+
+    [Fact]
+    public void Create_TrimsWhitespace()
+    {
+        var email = Email.Create("  test@example.com  ");
+        Assert.Equal("test@example.com", email.Value);
+    }
+
+    [Fact]
+    public void Create_ConvertsToLowercase()
+    {
+        var email = Email.Create("Test.User@EXAMPLE.COM");
+        Assert.Equal("test.user@example.com", email.Value);
+    }
+
+    #endregion
+
+    #region Value Object Equality Tests
+
+    [Fact]
+    public void Equals_WithSameValue_ReturnsTrue()
+    {
+        var email1 = Email.Create("test@example.com");
+        var email2 = Email.Create("test@example.com");
         Assert.Equal(email1, email2);
+    }
+
+    [Fact]
+    public void Equals_WithDifferentValue_ReturnsFalse()
+    {
+        var email1 = Email.Create("test1@example.com");
+        var email2 = Email.Create("test2@example.com");
+        Assert.NotEqual(email1, email2);
+    }
+
+    [Fact]
+    public void Equals_WithDifferentCasing_ReturnsTrue()
+    {
+        // Emails are normalized to lowercase
+        var email1 = Email.Create("TEST@example.com");
+        var email2 = Email.Create("test@EXAMPLE.com");
+        Assert.Equal(email1, email2);
+    }
+
+    [Fact]
+    public void GetHashCode_SameEmails_ReturnsSameHashCode()
+    {
+        var email1 = Email.Create("test@example.com");
+        var email2 = Email.Create("test@example.com");
+        Assert.Equal(email1.GetHashCode(), email2.GetHashCode());
+    }
+
+    #endregion
+}
+```
+
+### EF Core Configuration Tests
+
+```csharp
+public class ClientConfigurationTests
+{
+    private OrderDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<OrderDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        return new OrderDbContext(options);
+    }
+
+    [Fact]
+    public void SaveClient_WithEmail_PersistsEmailValue()
+    {
+        using var context = CreateDbContext();
+        var email = Email.Create("persistence@test.com");
+        var client = Client.Create("Test User", email);
+
+        context.Clients.Add(client);
+        context.SaveChanges();
+
+        context.ChangeTracker.Clear();
+        var savedClient = context.Clients.First();
+        Assert.Equal("persistence@test.com", savedClient.Email.Value);
+    }
+
+    [Fact]
+    public void Email_IsConfiguredWithValueConversion()
+    {
+        using var context = CreateDbContext();
+        var entityType = context.Model.FindEntityType(typeof(Client));
+        var emailProperty = entityType?.FindProperty(nameof(Client.Email));
+
+        Assert.NotNull(emailProperty);
+        Assert.NotNull(emailProperty.GetValueConverter());
+    }
+
+    [Fact]
+    public void EmailProperty_HasMaxLength254()
+    {
+        using var context = CreateDbContext();
+        var entityType = context.Model.FindEntityType(typeof(Client));
+        var emailProperty = entityType?.FindProperty(nameof(Client.Email));
+
+        Assert.NotNull(emailProperty);
+        Assert.Equal(254, emailProperty.GetMaxLength());
+    }
+
+    [Fact]
+    public void ModifyEmail_TracksChanges()
+    {
+        using var context = CreateDbContext();
+        var client = Client.Create("Test User", Email.Create("original@test.com"));
+        context.Clients.Add(client);
+        context.SaveChanges();
+
+        client.UpdateEmail(Email.Create("modified@test.com"));
+        var entry = context.Entry(client);
+
+        Assert.Equal(EntityState.Modified, entry.State);
     }
 }
 ```
@@ -772,24 +1003,32 @@ public class EmailTests
 
 ## 📝 Summary
 
-### What We Learned
+### What We Implemented
 
-1. ✅ Value Objects are **defined by their values**, not identity
-2. ✅ They must be **immutable** (cannot change after creation)
-3. ✅ Use **factory methods** for creation with validation
-4. ✅ Implement **value-based equality** (or use `record`)
-5. ✅ Map with **`OwnsOne`** in EF Core (inline storage)
-6. ✅ Replace **primitive obsession** with value objects
-7. ✅ Value objects are **self-validating** and type-safe
-8. ✅ Use for domain concepts: **Email, Money, Address, PhoneNumber**
+1. ✅ **ValueObject Base Class** - Abstract base with equality logic
+2. ✅ **Email Value Object** - Immutable, validated, with regex
+3. ✅ **Value Conversion** - EF Core mapping with `HasConversion`
+4. ✅ **FromDatabase Method** - Optimized materialization without validation
+5. ✅ **Comprehensive Tests** - Validation and EF Core configuration tests
+
+### Key Implementation Details
+
+| Feature | Implementation |
+|---------|---------------|
+| Base Class | `ValueObject` with `GetEqualityComponents()` |
+| Validation | Factory method `Create()` with regex |
+| EF Core Mapping | Value conversion with `FromDatabase()` |
+| Immutability | `readonly` field, no setter |
+| Equality | Override via base class |
+| Testing | xUnit with InMemory database |
 
 ### Key Takeaways
 
-> **"If something is defined by what it is (its value) rather than who it is (identity), it's a Value Object."**
+> **"Value Objects are defined by WHAT they are, not WHO they are."**
 
-> **"Immutability is not optional for Value Objects—it's fundamental to their nature."**
+> **"Use `FromDatabase()` for EF Core materialization to skip redundant validation."**
 
-> **"Value Objects fight primitive obsession and make your domain model richer and safer."**
+> **"Value conversion is ideal for single-property value objects like Email."**
 
 ## 🔗 Next Steps
 
