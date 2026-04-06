@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/docs/">
-    <File Path="../docs/Aggregate.md" />
     <File Path="../docs/DataAnnotations-vs-DomainValidation.md" />
     <File Path="../docs/DomainEvent.md" />
     <File Path="../docs/DomainService.md" />
