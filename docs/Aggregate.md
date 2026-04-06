@@ -20,6 +20,54 @@ Think of an Aggregate as a **consistency boundary**—all changes within the agg
 
 ---
 
+## 🌳 What is an Aggregate Root?
+
+An **Aggregate Root** is the main entity that acts as the gateway to the entire aggregate. All external access to the aggregate must go through the root.
+
+### Aggregate Root Responsibilities
+
+| Responsibility | Description |
+|----------------|-------------|
+| **Identity** | Provides the unique identifier for the entire aggregate |
+| **Entry Point** | Only entity accessible from outside the aggregate |
+| **Invariant Enforcement** | Ensures all business rules are satisfied |
+| **Child Lifecycle** | Controls creation, modification, and deletion of child entities |
+| **Consistency** | Guarantees the aggregate is always in a valid state |
+
+### Aggregate Root vs Regular Entity
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    AGGREGATE                            │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │           AGGREGATE ROOT (Client)                │   │
+│  │  • Has global identity (Id)                      │   │
+│  │  • Accessible from outside                       │   │
+│  │  • Enforces invariants                           │   │
+│  │  • Controls child entities                       │   │
+│  └─────────────────────────────────────────────────┘   │
+│           │                                             │
+│           ▼                                             │
+│  ┌─────────────────┐    ┌─────────────────┐            │
+│  │  Value Object   │    │  Child Entity   │            │
+│  │    (Email)      │    │   (Address)     │            │
+│  │  • No identity  │    │  • Local identity│           │
+│  │  • Immutable    │    │  • Only via root │           │
+│  └─────────────────┘    └─────────────────┘            │
+│                                                         │
+│  External code can ONLY access through Aggregate Root   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Rules for Aggregate Root
+
+1. **Global Identity**: The root has a unique ID (e.g., `Guid`, `int`)
+2. **Single Entry Point**: External objects can only reference the root
+3. **Transactional Boundary**: Changes are persisted atomically
+4. **Invariant Guardian**: All business rules pass through the root
+
+---
+
 ## 👤 Example: Client Aggregate (From This Project)
 
 In our `OrderContext.Domain` project, the `Client` entity serves as an **Aggregate Root** that contains an `Email` **Value Object**.
@@ -133,6 +181,209 @@ public class Client
 | **Factory Method** | `Client.Create()` | Centralizes validation and creation logic |
 | **Value Object** | `Email` class | Encapsulates email validation rules |
 | **Private Constructor** | `private Client()` | Forces use of factory method |
+
+---
+
+## 🏗️ Comprehensive Aggregate Root Implementation
+
+Here's a more complete example showing an Aggregate Root with child entities:
+
+```csharp
+// Aggregate Root with child entities
+public class Client
+{
+    // ═══════════════════════════════════════════════════════════════
+    // IDENTITY - Global unique identifier
+    // ═══════════════════════════════════════════════════════════════
+    [Key]
+    public Guid Id { get; private set; }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STATE - Properties with private setters
+    // ═══════════════════════════════════════════════════════════════
+    public string Name { get; private set; }
+    public Email Email { get; private set; }           // Value Object
+    public ClientStatus Status { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime? UpdatedAt { get; private set; }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CHILD ENTITIES - Private collection, public read-only access
+    // ═══════════════════════════════════════════════════════════════
+    private readonly List<Address> _addresses = new();
+    public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
+
+    // ═══════════════════════════════════════════════════════════════
+    // CONSTRUCTORS - Private to force factory method usage
+    // ═══════════════════════════════════════════════════════════════
+    private Client() { }  // EF Core
+
+    private Client(Guid id, string name, Email email)
+    {
+        Id = id;
+        Name = name;
+        Email = email;
+        Status = ClientStatus.Active;
+        CreatedAt = DateTime.UtcNow;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FACTORY METHOD - Single entry point for creation
+    // ═══════════════════════════════════════════════════════════════
+    public static Client Create(string name, Email email)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name cannot be empty!", nameof(name));
+
+        if (email == null)
+            throw new ArgumentNullException(nameof(email));
+
+        return new Client(Guid.NewGuid(), name, email);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BEHAVIOR METHODS - Enforce invariants and business rules
+    // ═══════════════════════════════════════════════════════════════
+
+    public void UpdateName(string newName)
+    {
+        EnsureActive();
+
+        if (string.IsNullOrWhiteSpace(newName))
+            throw new ArgumentException("Name cannot be empty!", nameof(newName));
+
+        Name = newName;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateEmail(Email newEmail)
+    {
+        EnsureActive();
+        Email = newEmail ?? throw new ArgumentNullException(nameof(newEmail));
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CHILD ENTITY MANAGEMENT - Root controls child lifecycle
+    // ═══════════════════════════════════════════════════════════════
+
+    public void AddAddress(string street, string city, string postalCode, AddressType type)
+    {
+        EnsureActive();
+
+        // Invariant: Only one primary address allowed
+        if (type == AddressType.Primary && _addresses.Any(a => a.Type == AddressType.Primary))
+            throw new InvalidOperationException("Client already has a primary address.");
+
+        var address = new Address(street, city, postalCode, type);
+        _addresses.Add(address);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveAddress(Guid addressId)
+    {
+        EnsureActive();
+
+        var address = _addresses.FirstOrDefault(a => a.Id == addressId);
+        if (address == null)
+            throw new InvalidOperationException("Address not found.");
+
+        _addresses.Remove(address);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetPrimaryAddress(Guid addressId)
+    {
+        EnsureActive();
+
+        var newPrimary = _addresses.FirstOrDefault(a => a.Id == addressId)
+            ?? throw new InvalidOperationException("Address not found.");
+
+        // Demote current primary, promote new one
+        foreach (var address in _addresses)
+        {
+            address.SetType(address.Id == addressId 
+                ? AddressType.Primary 
+                : AddressType.Secondary);
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STATUS MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════
+
+    public void Deactivate()
+    {
+        if (Status == ClientStatus.Inactive)
+            throw new InvalidOperationException("Client is already inactive.");
+
+        Status = ClientStatus.Inactive;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Activate()
+    {
+        if (Status == ClientStatus.Active)
+            throw new InvalidOperationException("Client is already active.");
+
+        Status = ClientStatus.Active;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PRIVATE HELPER METHODS - Invariant checks
+    // ═══════════════════════════════════════════════════════════════
+
+    private void EnsureActive()
+    {
+        if (Status == ClientStatus.Inactive)
+            throw new InvalidOperationException("Cannot modify an inactive client.");
+    }
+}
+
+// Child Entity - Only accessible through Aggregate Root
+public class Address
+{
+    public Guid Id { get; private set; }
+    public string Street { get; private set; }
+    public string City { get; private set; }
+    public string PostalCode { get; private set; }
+    public AddressType Type { get; private set; }
+
+    private Address() { }  // EF Core
+
+    // Internal constructor - only Client can create
+    internal Address(string street, string city, string postalCode, AddressType type)
+    {
+        Id = Guid.NewGuid();
+        Street = street ?? throw new ArgumentNullException(nameof(street));
+        City = city ?? throw new ArgumentNullException(nameof(city));
+        PostalCode = postalCode ?? throw new ArgumentNullException(nameof(postalCode));
+        Type = type;
+    }
+
+    // Internal method - only Client can modify
+    internal void SetType(AddressType type) => Type = type;
+}
+
+public enum ClientStatus { Active, Inactive }
+public enum AddressType { Primary, Secondary }
+```
+
+### Aggregate Root Implementation Checklist
+
+| Component | Purpose | Implementation |
+|-----------|---------|----------------|
+| **Private setters** | Encapsulation | All properties use `private set` |
+| **Private constructor** | Control creation | `private Client() { }` |
+| **Factory method** | Enforce creation rules | `Client.Create()` |
+| **Private collection** | Protect children | `private readonly List<Address>` |
+| **Read-only exposure** | Safe access | `IReadOnlyCollection<Address>` |
+| **Internal child constructor** | Root controls lifecycle | `internal Address()` |
+| **Behavior methods** | Business logic | `AddAddress()`, `UpdateName()` |
+| **Invariant checks** | Business rules | `EnsureActive()`, primary address check |
+| **State tracking** | Audit trail | `UpdatedAt` property |
 
 ---
 
