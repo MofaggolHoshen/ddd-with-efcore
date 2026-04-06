@@ -136,7 +136,104 @@ public class Client
 
 ---
 
-## 🎯 Aggregate Design Guidelines
+## 🎯 Aggregate Best Practices
+
+### 1. Keep Aggregates Small
+
+```
+❌ Large Aggregate (avoid)
+Order
+├── Customer (full entity)
+├── OrderItems[]
+├── Payments[]
+├── Shipments[]
+└── Invoices[]
+
+✅ Small Aggregate (preferred)
+Order
+├── CustomerId (reference by ID)
+├── OrderItems[]
+└── Status
+```
+
+**Rule**: Include only what's needed to enforce invariants within a single transaction.
+
+### 2. Reference Other Aggregates by ID Only
+
+```csharp
+// ❌ Bad - direct reference creates tight coupling
+public class Order
+{
+    public Customer Customer { get; private set; }  // Full entity
+}
+
+// ✅ Good - reference by ID
+public class Order
+{
+    public Guid CustomerId { get; private set; }  // Just the ID
+}
+```
+
+### 3. Design Around Business Invariants
+
+| Invariant | Aggregate Design |
+|-----------|------------------|
+| "Order total cannot exceed credit limit" | Keep `OrderItems` inside `Order` |
+| "Email must be valid format" | Use `Email` Value Object inside `Client` |
+| "Only one primary address" | Keep `Addresses` inside `Client` |
+
+### 4. One Transaction = One Aggregate
+
+```csharp
+// ❌ Bad - modifying multiple aggregates in one transaction
+public void PlaceOrder(Order order, Customer customer, Inventory inventory)
+{
+    order.Confirm();
+    customer.AddLoyaltyPoints(100);
+    inventory.Reserve(order.Items);
+    _dbContext.SaveChanges();  // All in one transaction
+}
+
+// ✅ Good - use domain events for eventual consistency
+public void PlaceOrder(Order order)
+{
+    order.Confirm();  // Raises OrderConfirmedEvent
+    _dbContext.SaveChanges();
+}
+
+// Handle other aggregates via event handlers
+public class OrderConfirmedHandler
+{
+    public void Handle(OrderConfirmedEvent e)
+    {
+        _customerService.AddLoyaltyPoints(e.CustomerId, 100);
+        _inventoryService.Reserve(e.Items);
+    }
+}
+```
+
+### 5. Load Aggregates Completely
+
+```csharp
+// ✅ Good - load entire aggregate
+var client = await _dbContext.Clients
+    .Include(c => c.Addresses)  // If you have child entities
+    .FirstOrDefaultAsync(c => c.Id == id);
+
+// ❌ Bad - partial loading breaks invariants
+var client = await _dbContext.Clients
+    .Select(c => new { c.Name, c.Email })  // Missing data
+    .FirstOrDefaultAsync();
+```
+
+### 6. Protect Internal State
+
+| Pattern | Implementation | Status |
+|---------|----------------|--------|
+| Private setters | `public string Name { get; private set; }` | ✅ |
+| Private constructor | `private Client() { }` | ✅ |
+| Value Objects | `Email` class | ✅ |
+| Factory methods | `Client.Create()`, `Email.Create()` | ✅ |
 
 ### ✅ Do
 
@@ -203,5 +300,16 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
 | Factory Method | `Client.Create()`, `Email.Create()` |
 | Invariants | "Name cannot be empty", "Valid email format" |
 | EF Core Mapping | Value Conversion for `Email` |
+
+### ✅ Best Practices Checklist
+
+| Practice | Description | Your Project |
+|----------|-------------|--------------|
+| Small aggregates | Minimal entities per aggregate | ✅ `Client` only |
+| Reference by ID | No direct entity references | ✅ N/A yet |
+| Factory methods | Centralized creation logic | ✅ `Client.Create()` |
+| Value Objects | Immutable validated concepts | ✅ `Email` |
+| Private setters | Encapsulated state | ✅ All properties |
+| Single transaction | One aggregate per save | ✅ |
 
 Aggregates combined with Value Objects help maintain **consistency**, **validation**, and **encapsulation** in your domain model while providing clear boundaries for transactions and persistence.
