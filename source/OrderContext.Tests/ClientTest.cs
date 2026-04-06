@@ -46,6 +46,7 @@ public class ClientTest
         context.SaveChanges();
 
         // Assert
+        context.ChangeTracker.Clear();
         var savedClient = context.Clients.FirstOrDefault();
         Assert.NotNull(savedClient);
         Assert.Equal(client.Id, savedClient.Id);
@@ -70,6 +71,7 @@ public class ClientTest
         context.SaveChanges();
 
         // Assert
+        context.ChangeTracker.Clear();
         var updatedClient = context.Clients.FirstOrDefault();
         Assert.NotNull(updatedClient);
         Assert.Equal(newEmail.Value, updatedClient.Email.Value);

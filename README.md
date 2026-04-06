@@ -11,13 +11,13 @@ This project demonstrates how to build a rich domain model using DDD principles 
 This project explains DDD concepts incrementally. Each concept is detailed in a separate document:
 
 1. **[Entity](./docs/Entity.md)** ✅ - Objects with unique identity (Client example)
-2. **[Value Object](./docs/ValueObject.md)** - Immutable objects defined by their values (Email example)
+2. **[Value Object](./docs/ValueObject.md)** ✅ - Immutable objects defined by their values (Email example)
 3. **[Aggregate](./docs/Aggregate.md)** - Cluster of objects treated as a unit
 4. **[Domain Service](./docs/DomainService.md)** - Business logic that doesn't belong to entities
 5. **[Repository](./docs/Repository.md)** - Abstraction for data access
 6. **[Domain Event](./docs/DomainEvent.md)** - Significant occurrences in the domain
 
-> **Note**: Concepts are explained as they are implemented in different branches. Currently on branch: `entity-in-ef`
+> **Note**: Concepts are explained as they are implemented in different branches. Currently on branch: `value-object-in-ef`
 
 ## 🔧 Key Implementation Highlights
 
@@ -69,29 +69,30 @@ This project explains DDD concepts incrementally. Each concept is detailed in a 
    dotnet test
    ```
 
-## 💡 Current Branch: `entity-in-ef`
+## 💡 Current Branch: `value-object-in-ef`
 
-This branch focuses on implementing **Entities** in Domain-Driven Design with Entity Framework Core.
+This branch focuses on implementing **Value Objects** in Domain-Driven Design with Entity Framework Core.
 
 ### What's Covered:
-- Creating entities with proper encapsulation
+- Creating immutable value objects
 - Using private constructors and factory methods
-- Implementing business logic within entities
-- Configuring entities in EF Core
-- Managing entity lifecycle
+- Implementing value-based equality
+- Configuring value objects in EF Core with `OwnsOne`
+- Fighting primitive obsession
 
 ### Key Files:
-- `OrderContext.Domain/Client.cs` - Entity implementation
-- `OrderContext.Infrastructure/ClientConfiguration.cs` - EF Core configuration
+- `OrderContext.Domain/Email.cs` - Value Object implementation
+- `OrderContext.Domain/Client.cs` - Entity using value object
+- `OrderContext.Infrastructure/ClientConfiguration.cs` - EF Core `OwnsOne` configuration
 
-See the [Entity documentation](./docs/Entity.md) for detailed explanation.
+See the [Value Object documentation](./docs/ValueObject.md) for detailed explanation.
 
 ## 📖 Learning Path
 
 This is an educational project designed to teach DDD concepts step by step:
 
-1. **Start with Entities** (Current) - Understanding identity and lifecycle
-2. **Move to Value Objects** - Immutability and equality
+1. **Entities** ✅ - Understanding identity and lifecycle
+2. **Value Objects** ✅ (Current) - Immutability and equality
 3. **Build Aggregates** - Consistency boundaries
 4. **Add Domain Services** - Cross-entity logic
 5. **Implement Repositories** - Data access abstraction
