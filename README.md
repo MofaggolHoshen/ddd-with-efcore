@@ -1,4 +1,4 @@
-# Domain-Driven Design with Entity Framework Core (EF)
+# Domain Driven Design with Entity Framework Core (EF)
 
 A practical implementation of Domain-Driven Design (DDD) tactical patterns with Entity Framework Core in .NET 10.
 
