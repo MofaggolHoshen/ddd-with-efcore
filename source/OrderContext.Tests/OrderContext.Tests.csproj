@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\OrderContext.Application\OrderContext.Application.csproj" />
     <ProjectReference Include="..\OrderContext.Infratructure\OrderContext.Infratructure.csproj" />
   </ItemGroup>
 
