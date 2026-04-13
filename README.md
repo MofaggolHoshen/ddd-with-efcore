@@ -6,48 +6,7 @@ A practical implementation of Domain-Driven Design (DDD) tactical patterns with 
 
 This project demonstrates how to build a rich domain model using DDD principles with Entity Framework Core. The implementation focuses on the **Order Context** domain, showcasing how to properly structure entities, value objects, and their persistence using EF Core.
 
-## 📚 DDD Concepts - Step by Step
-
-This project explains DDD concepts incrementally. Each concept is detailed in a separate document:
-
-1. **[Entity](./docs/Entity.md)** ✅ - Objects with unique identity (Client example)
-2. **[Value Object](./docs/ValueObject.md)** ✅ - Immutable objects defined by their values (Email example)
-3. **[Aggregate](./docs/Aggregate.md)** ✅ - Cluster of objects treated as a unit (Client + Email example)
-4. **[Domain Service](./docs/DomainService.md)** ✅ - Business logic that doesn't belong to entities
-5. **[Repository](./docs/Repository.md)** - Abstraction for data access
-6. **[Domain Event](./docs/DomainEvent.md)** - Significant occurrences in the domain
-
-> **Note**: Concepts are explained as they are implemented in different branches. Currently on branch: `main`
-
-## 🔧 Key Implementation Highlights
-
-### Domain Layer
-- **Client Entity**: Aggregate root with encapsulated business logic
-- **Email Value Object**: Immutable type with built-in validation
-- **Domain Services**: Stateless operations for cross-entity business logic
-  - `IEmailUniquenessChecker` - Validates email uniqueness across clients
-  - `ClientRegistrationService` - Handles client registration with validation
-  - `ClientTransferService` - Manages client email updates
-- **DomainException**: Custom exception for domain rule violations
-- **Private Setters**: Enforces encapsulation and prevents invalid state
-- **Factory Methods**: Ensures objects are always created in valid state
-- **Value Conversion**: EF Core mapping for value objects
-
-### Infrastructure Layer
-- **EF Core DbContext**: `OrderDbContext` for data persistence
-- **Fluent API Configuration**: `ClientConfiguration` for entity mapping
-- **Value Object Mapping**: Using `HasConversion` to persist Email as string
-- **Domain Service Implementations**: Infrastructure-dependent implementations
-  - `EmailUniquenessChecker` - Uses DbContext to check email uniqueness
-
-### Design Patterns Applied
-- ✅ Factory Method Pattern
-- ✅ Encapsulation
-- ✅ Immutability (Value Objects)
-- ✅ Aggregate Pattern
-- ✅ Domain Service Pattern
-- ✅ Dependency Injection
-- ✅ Repository Pattern (coming soon)
+> **Current Branch**: `repository-in-ef` - Complete implementation of Repository Pattern with Unit of Work
 
 ## 🚀 Getting Started
 
@@ -56,98 +15,221 @@ This project explains DDD concepts incrementally. Each concept is detailed in a 
 - Visual Studio 2026 or later
 - SQL Server (or modify for your preferred database)
 
-### Setup
+### Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/MofaggolHoshen/domain-driven-design-with-efcore.git
-   cd domain-driven-design-with-efcore
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/MofaggolHoshen/domain-driven-design-with-efcore.git
+cd domain-driven-design-with-efcore
 
-2. **Restore dependencies**
-   ```bash
-   dotnet restore
-   ```
-
-3. **Build the solution**
-   ```bash
-   dotnet build
-   ```
-
-4. **Run tests**
-   ```bash
-   dotnet test
-   ```
-
-## 💡 Current Branch: `main`
-
-This branch contains the complete implementation of **Domain-Driven Design** tactical patterns with Entity Framework Core.
-
-### What's Covered:
-- Entity and Aggregate Root patterns (Client)
-- Value Objects with immutability (Email)
-- Domain Services for cross-entity business logic
-- Infrastructure layer with EF Core persistence
-- Comprehensive unit tests
-
-### Key Files:
-
-#### Domain Layer
-- `OrderContext.Domain/Client.cs` - Aggregate Root implementation
-- `OrderContext.Domain/Email.cs` - Value Object implementation
-- `OrderContext.Domain/Common/ValueObject.cs` - Base class for value objects
-- `OrderContext.Domain/Common/DomainException.cs` - Domain rule violation exception
-- `OrderContext.Domain/Services/IEmailUniquenessChecker.cs` - Domain service interface
-- `OrderContext.Domain/Services/IClientRegistrationService.cs` - Registration service interface
-- `OrderContext.Domain/Services/IClientTransferService.cs` - Transfer service interface
-- `OrderContext.Domain/Services/ClientRegistrationService.cs` - Domain layer implementation
-- `OrderContext.Domain/Services/ClientTransferService.cs` - Domain layer implementation
-
-#### Infrastructure Layer
-- `OrderContext.Infrastructure/Services/EmailUniquenessChecker.cs` - Infrastructure implementation
-- `OrderContext.Infrastructure/ClientConfiguration.cs` - EF Core configuration
-- `OrderContext.Infrastructure/OrderDbContext.cs` - EF Core DbContext
-
-#### Tests
-- `OrderContext.Tests/ClientTest.cs` - Client entity tests
-- `OrderContext.Tests/EmailTests.cs` - Email value object tests
-- `OrderContext.Tests/ClientRegistrationServiceTests.cs` - Registration service tests
-- `OrderContext.Tests/ClientTransferServiceTests.cs` - Transfer service tests
-- `OrderContext.Tests/ClientConfigurationTests.cs` - EF Core configuration tests
-
-See the documentation for detailed explanations:
-- [Entity documentation](./docs/Entity.md)
-- [Value Object documentation](./docs/ValueObject.md)
-- [Aggregate documentation](./docs/Aggregate.md)
-- [Domain Service documentation](./docs/DomainService.md)
+# Restore, build, and test
+dotnet restore
+dotnet build
+dotnet test
+```
 
 ## 📖 Learning Path
 
-This is an educational project designed to teach DDD concepts step by step:
+This educational project teaches DDD concepts step by step. Each concept is documented with practical examples:
 
-1. **Entities** ✅ - Understanding identity and lifecycle
-2. **Value Objects** ✅ - Immutability and equality
-3. **Aggregates** ✅ - Consistency boundaries and Aggregate Root
-4. **Domain Services** ✅ - Cross-entity logic and layer placement
-5. **Repositories** - Data access abstraction
-6. **Domain Events** - Decoupled communication
+| # | Concept | Status | Description | Documentation |
+|---|---------|--------|-------------|---------------|
+| 1 | **Entity** | ✅ | Objects with unique identity | [Entity.md](./docs/Entity.md) |
+| 2 | **Value Object** | ✅ | Immutable objects defined by values | [ValueObject.md](./docs/ValueObject.md) |
+| 3 | **Aggregate** | ✅ | Cluster of objects as a unit | [Aggregate.md](./docs/Aggregate.md) |
+| 4 | **Domain Service** | ✅ | Cross-entity business logic | [DomainService.md](./docs/DomainService.md) |
+| 5 | **Repository** | ✅ | Data access abstraction | [Repository.md](./docs/Repository.md) |
+| 6 | **Domain Event** | 🔲 | Decoupled communication | [DomainEvent.md](./docs/DomainEvent.md) |
 
-Each concept is documented with practical implementation examples.
+## 🏗️ Project Architecture
 
-## 🎓 Best Practices Demonstrated
+This project implements the **three core DDD layers**. The Presentation layer is shown for reference but not included in this project:
 
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PRESENTATION LAYER                                    │
+│            (Not implemented - Web API, MVC, Blazor, Console, etc.)          │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Controllers/           Views/              ViewModels/              │    │
+│  │  └── ClientController   └── Client/         └── ClientViewModel      │    │
+│  │  Program.cs             └── Shared/         └── CreateClientRequest  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                     │                                        │
+│                              Calls  │                                        │
+│                                     ▼                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                          APPLICATION LAYER                                   │
+│                     OrderContext.Application                                 │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Services/                    DTOs/                                  │    │
+│  │  └── ClientApplicationService └── ClientDto                          │    │
+│  │                               └── PagedResult<T>                     │    │
+│  │  DependencyInjection.cs                                              │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                          │ Uses │                                            │
+│                          ▼      ▼                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                           DOMAIN LAYER                                       │
+│                      OrderContext.Domain                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Entities/Aggregates     Value Objects      Repositories/            │    │
+│  │  └── Client.cs           └── Email.cs       └── IRepository<T,TId>   │    │
+│  │                                             └── IClientRepository    │    │
+│  │  Services/               Common/            └── IUnitOfWork          │    │
+│  │  └── ClientRegistration  └── ValueObject                             │    │
+│  │  └── ClientTransfer      └── DomainException                         │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                     ▲                                        │
+│                          Implements │                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        INFRASTRUCTURE LAYER                                  │
+│                     OrderContext.Infrastructure                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Repositories/               Services/            Configurations/    │    │
+│  │  └── Repository<T,TId>       └── EmailUniqueness  └── ClientConfig   │    │
+│  │  └── ClientRepository            Checker                             │    │
+│  │  └── UnitOfWork                                                      │    │
+│  │  OrderDbContext.cs           DependencyInjection.cs                  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                     │                                        │
+│                                     ▼                                        │
+│                              [ DATABASE ]                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Layer Dependencies
+
+```
+┌────────────────────────────┐
+│  Presentation Layer        │  ◄─── NOT IMPLEMENTED (Web API, MVC, Blazor, etc.)
+│  (UI/API - Optional)       │
+└──────────────┬─────────────┘
+               │
+               │ References
+               ▼
+┌──────────────────────────┐
+│ OrderContext.Application │  ◄─── References Domain only
+│   (Orchestration Layer)  │
+└──────────────┬───────────┘
+               │
+               │ References
+               ▼
+┌──────────────────────────┐
+│   OrderContext.Domain    │  ◄─── NO DEPENDENCIES (Pure Domain Logic)
+│      (Core Layer)        │
+└──────────────┬───────────┘
+               │
+               │ Implemented by
+               ▼
+┌────────────────────────────┐
+│ OrderContext.Infrastructure │  ◄─── References Domain only
+│    (Persistence Layer)      │
+└─────────────────────────────┘
+```
+
+**Key Principle**: High-level modules (Application) depend on abstractions (Domain interfaces), not on low-level modules (Infrastructure).
+
+## 🔄 Data Flow Example
+
+### Register New Client Flow
+
+```
+┌────────────────┐    ┌──────────────────────┐    ┌──────────────┐    ┌────────────────┐
+│ Presentation   │───▶│  Application Layer   │───▶│ Domain Layer │───▶│ Infrastructure │
+│ (API/UI)       │    │  ClientAppService    │    │              │    │                │
+│ Not in project │    └──────────────────────┘    └──────────────┘    └────────────────┘
+└────────────────┘              │                        │                     │
+Step 1: RegisterClientAsync("John", "john@test.com")   │                     │
+                              │                        │                     │
+                              ▼                        │                     │
+Step 2: Email.Create() ──────────────────────────────▶│ Validates & creates │
+                              │                        │ Value Object        │
+                              ▼                        │                     │
+Step 3: EmailExistsAsync() ──────────────────────────────────────────────────▶
+                              │                                              │
+                              │◄─────────────────────── Returns: false ──────│
+                              │                        │                     │
+Step 4: Client.Create() ─────────────────────────────▶│ Creates Aggregate   │
+                              │                        │                     │
+Step 5: AddAsync(client) ────────────────────────────────────────────────────▶
+                              │                                              │
+Step 6: SaveChangesAsync() ──────────────────────────────────────────────────▶
+                              │                                              │
+                              │◄─────────────────────── Persisted to DB ─────│
+                              ▼                        │                     │
+Step 7: return client.Id ◄────────────────────────────│                     │
+```
+
+> **Note**: This project doesn't include a Presentation/UI layer. The Application layer exposes services that can be consumed by any presentation technology (Web API, MVC, Blazor, etc.).
+
+## 🔧 Layer Implementation Details
+
+### Domain Layer
+| Component | Purpose |
+|-----------|---------|
+| `Client.cs` | Aggregate Root with encapsulated business logic |
+| `Email.cs` | Value Object with immutability and validation |
+| `IRepository<T,TId>` | Generic repository interface |
+| `IClientRepository` | Client-specific repository interface |
+| `IUnitOfWork` | Transaction management interface |
+| `ClientRegistrationService` | Domain service for registration |
+| `ClientTransferService` | Domain service for email updates |
+| `DomainException` | Custom exception for rule violations |
+
+### Application Layer
+| Component | Purpose |
+|-----------|---------|
+| `ClientApplicationService` | Orchestrates CRUD operations with DTOs |
+| `ClientDto` | Read-only data transfer object |
+| `PagedResult<T>` | Pagination wrapper |
+| `DependencyInjection.cs` | Service registration |
+
+### Infrastructure Layer
+| Component | Purpose |
+|-----------|---------|
+| `Repository<T,TId>` | Generic EF Core repository |
+| `ClientRepository` | Client-specific implementation |
+| `UnitOfWork` | Transaction coordination |
+| `OrderDbContext` | EF Core DbContext |
+| `ClientConfiguration` | Fluent API entity mapping |
+| `EmailUniquenessChecker` | Infrastructure service implementation |
+
+### Tests (103 tests)
+| Test Class | Coverage |
+|------------|----------|
+| `ClientTest.cs` | Entity behavior |
+| `EmailTests.cs` | Value Object validation |
+| `ClientRepositoryTests.cs` | Repository operations |
+| `UnitOfWorkTests.cs` | Transaction management |
+| `ClientApplicationServiceTests.cs` | Application service |
+| `ClientRegistrationServiceTests.cs` | Domain service |
+| `ClientTransferServiceTests.cs` | Domain service |
+| `ClientConfigurationTests.cs` | EF Core mapping |
+
+## ✅ Design Patterns & Best Practices
+
+### Patterns Applied
+| Pattern | Implementation |
+|---------|---------------|
+| Factory Method | `Client.Create()`, `Email.Create()` |
+| Repository | `IClientRepository` / `ClientRepository` |
+| Unit of Work | `IUnitOfWork` / `UnitOfWork` |
+| Aggregate | `Client` as Aggregate Root |
+| Value Object | `Email` immutable type |
+| Domain Service | `ClientRegistrationService`, `ClientTransferService` |
+| Dependency Injection | Interface-based loose coupling |
+
+### Best Practices Demonstrated
 1. **Encapsulation** - Private setters and fields
 2. **Validation** - Always in the domain, not just UI/API
 3. **Factory Methods** - Controlled object creation
 4. **Immutability** - For value objects
-5. **Separation of Concerns** - Domain vs Infrastructure
+5. **Separation of Concerns** - Domain vs Application vs Infrastructure
 6. **Rich Domain Model** - Business logic in the domain
 7. **Ubiquitous Language** - Code reflects business concepts
 8. **Aggregate Design** - Small aggregates, reference by ID
-9. **Value Conversion** - EF Core mapping for value objects
-10. **Domain Services** - Stateless operations for cross-entity logic
-11. **Interface Segregation** - Interfaces in Domain, implementations where needed
-12. **Dependency Injection** - Loose coupling between layers
+9. **Interface Segregation** - Interfaces in Domain, implementations in Infrastructure
+10. **DTOs** - Data transfer objects for layer boundaries
 
 ## 📚 Resources
 

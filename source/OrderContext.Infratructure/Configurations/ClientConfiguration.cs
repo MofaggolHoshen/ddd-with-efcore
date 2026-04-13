@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OrderContext.Domain;
 
-namespace OrderContext.Infratructure;
+namespace OrderContext.Infratructure.Configurations;
 
 public class ClientConfiguration : IEntityTypeConfiguration<Client>
 {

@@ -9,6 +9,7 @@
     <File Path="../docs/ValueObject.md" />
     <File Path="../README.md" />
   </Folder>
+  <Project Path="OrderContext.Application/OrderContext.Application.csproj" />
   <Project Path="OrderContext.Domain/OrderContext.Domain.csproj" />
   <Project Path="OrderContext.Infratructure/OrderContext.Infratructure.csproj" />
   <Project Path="OrderContext.Tests/OrderContext.Tests.csproj" Id="6bfbf61c-a640-40ef-912d-234f971fdf01" />
