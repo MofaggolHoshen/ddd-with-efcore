@@ -17,7 +17,7 @@ This project explains DDD concepts incrementally. Each concept is detailed in a 
 5. **[Repository](./docs/Repository.md)** - Abstraction for data access
 6. **[Domain Event](./docs/DomainEvent.md)** - Significant occurrences in the domain
 
-> **Note**: Concepts are explained as they are implemented in different branches. Currently on branch: `domain-service-in-ef`
+> **Note**: Concepts are explained as they are implemented in different branches. Currently on branch: `main`
 
 ## 🔧 Key Implementation Highlights
 
@@ -60,8 +60,8 @@ This project explains DDD concepts incrementally. Each concept is detailed in a 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/MofaggolHoshen/ddd-with-efcore.git
-   cd ddd-with-efcore
+   git clone https://github.com/MofaggolHoshen/domain-driven-design-with-efcore.git
+   cd domain-driven-design-with-efcore
    ```
 
 2. **Restore dependencies**
@@ -79,18 +79,20 @@ This project explains DDD concepts incrementally. Each concept is detailed in a 
    dotnet test
    ```
 
-## 💡 Current Branch: `domain-service-in-ef`
+## 💡 Current Branch: `main`
 
-This branch contains the implementation of **Domain Services** in Domain-Driven Design with Entity Framework Core.
+This branch contains the complete implementation of **Domain-Driven Design** tactical patterns with Entity Framework Core.
 
 ### What's Covered:
-- Creating stateless domain services for cross-entity logic
-- Understanding when to use domain services vs application services
-- Interface placement in Domain Layer, implementation placement based on dependencies
-- Dependency injection for domain services
-- Testing domain services with mocking
+- Entity and Aggregate Root patterns (Client)
+- Value Objects with immutability (Email)
+- Domain Services for cross-entity business logic
+- Infrastructure layer with EF Core persistence
+- Comprehensive unit tests
 
 ### Key Files:
+
+#### Domain Layer
 - `OrderContext.Domain/Client.cs` - Aggregate Root implementation
 - `OrderContext.Domain/Email.cs` - Value Object implementation
 - `OrderContext.Domain/Common/ValueObject.cs` - Base class for value objects
@@ -100,8 +102,18 @@ This branch contains the implementation of **Domain Services** in Domain-Driven 
 - `OrderContext.Domain/Services/IClientTransferService.cs` - Transfer service interface
 - `OrderContext.Domain/Services/ClientRegistrationService.cs` - Domain layer implementation
 - `OrderContext.Domain/Services/ClientTransferService.cs` - Domain layer implementation
+
+#### Infrastructure Layer
 - `OrderContext.Infrastructure/Services/EmailUniquenessChecker.cs` - Infrastructure implementation
 - `OrderContext.Infrastructure/ClientConfiguration.cs` - EF Core configuration
+- `OrderContext.Infrastructure/OrderDbContext.cs` - EF Core DbContext
+
+#### Tests
+- `OrderContext.Tests/ClientTest.cs` - Client entity tests
+- `OrderContext.Tests/EmailTests.cs` - Email value object tests
+- `OrderContext.Tests/ClientRegistrationServiceTests.cs` - Registration service tests
+- `OrderContext.Tests/ClientTransferServiceTests.cs` - Transfer service tests
+- `OrderContext.Tests/ClientConfigurationTests.cs` - EF Core configuration tests
 
 See the documentation for detailed explanations:
 - [Entity documentation](./docs/Entity.md)
@@ -155,4 +167,4 @@ This is an educational project. Feel free to fork and experiment!
 ---
 
 **Author**: [Mofaggol Hoshen](https://github.com/MofaggolHoshen)  
-**Repository**: [ddd-with-efcore](https://github.com/MofaggolHoshen/ddd-with-efcore)
+**Repository**: [domain-driven-design-with-efcore](https://github.com/MofaggolHoshen/domain-driven-design-with-efcore)
