@@ -1,4 +1,6 @@
 ﻿using OrderContext.Domain;
+using OrderContext.Domain.Common;
+using OrderContext.Domain.Events;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -6,7 +8,7 @@ using System.Text;
 
 namespace OrderContext;
 
-public class Client
+public class Client : Entity
 {
     [Key]
     public Guid Id { get; private set; }
@@ -34,6 +36,7 @@ public class Client
         Name = name;
         Email = email;
         CreatedAt = DateTime.UtcNow;
+        RaiseDomainEvent(new ClientRegisteredEvent(Id, Name, Email.Value));
     }
 
     /// <summary>
@@ -76,7 +79,9 @@ public class Client
     {
         if (string.IsNullOrWhiteSpace(newName))
             throw new ArgumentException("Name cannot be empty!");
+        var oldName = Name;
         Name = newName;
+        RaiseDomainEvent(new ClientNameChangedEvent(Id, oldName, newName));
     }
 
     /// <summary>
@@ -86,6 +91,9 @@ public class Client
     /// <exception cref="ArgumentNullException">Thrown when the new email is null.</exception>
     public void UpdateEmail(Email newEmail)
     {
-        Email = newEmail ?? throw new ArgumentNullException(nameof(newEmail));
+        if (newEmail == null) throw new ArgumentNullException(nameof(newEmail));
+        var oldEmail = Email;
+        Email = newEmail;
+        RaiseDomainEvent(new ClientEmailChangedEvent(Id, oldEmail.Value, newEmail.Value));
     }
 }
