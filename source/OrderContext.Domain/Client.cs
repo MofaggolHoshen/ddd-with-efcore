@@ -8,10 +8,10 @@ using System.Text;
 
 namespace OrderContext;
 
-public class Client : Entity
+public class Client : AggregateRoot<Guid>
 {
     [Key]
-    public Guid Id { get; private set; }
+    public override Guid Id { get; protected set; }
     public string Name { get; private set; }
     public Email Email { get; private set; }
     public DateTime CreatedAt { get; private set; }
