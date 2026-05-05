@@ -24,7 +24,9 @@ Domain Layer
 │   ├── IDomainEvent.cs            ← Marker interface
 │   ├── IDomainEventHandler.cs     ← Generic handler contract
 │   ├── IDomainEventDispatcher.cs  ← Dispatcher abstraction
-│   └── Entity.cs                  ← Base class that holds events
+│   ├── Entity.cs                  ← Generic identity-based entity base
+│   ├── IAggregateRoot.cs          ← Aggregate root contract
+│   └── AggregateRoot.cs           ← Base class that holds events
 └── Events/
     ├── ClientRegisteredEvent.cs
     ├── ClientEmailChangedEvent.cs
@@ -71,12 +73,18 @@ public interface IDomainEventDispatcher
 
 ---
 
-## 🧱 Entity Base Class
+## 🧱 Aggregate Root Base Class
 
-All domain entities extend `Entity`, which holds a private collection of domain events:
+Domain events are owned by aggregate roots, not by all entities. `AggregateRoot<TId>` implements `IAggregateRoot` and stores pending events:
 
 ```csharp
-public abstract class Entity
+public interface IAggregateRoot
+{
+    IReadOnlyList<IDomainEvent> DomainEvents { get; }
+    void ClearDomainEvents();
+}
+
+public abstract class AggregateRoot<TId> : Entity<TId>, IAggregateRoot where TId : notnull
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
@@ -140,14 +148,15 @@ public sealed class ClientEmailChangedEvent : IDomainEvent
 
 ## ⚙️ How Events Are Dispatched
 
-`OrderDbContext.SaveChangesAsync` collects events from all tracked entities, clears them, saves, then dispatches:
+`OrderDbContext.SaveChangesAsync` collects events from all tracked aggregate roots, clears them, saves, then dispatches:
 
 ```csharp
 public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
 {
-    var entities = ChangeTracker.Entries<Entity>()
-        .Where(e => e.Entity.DomainEvents.Count > 0)
+    var entities = ChangeTracker.Entries()
         .Select(e => e.Entity)
+        .OfType<IAggregateRoot>()
+        .Where(e => e.DomainEvents.Count > 0)
         .ToList();
 
     var domainEvents = entities.SelectMany(e => e.DomainEvents).ToList();
@@ -200,12 +209,12 @@ Multiple handlers for the same event are all invoked in registration order.
        └─ RaiseDomainEvent(new ClientRegisteredEvent(...))
               │
               ▼
-    [Stored in entity._domainEvents]
+    [Stored in aggregateRoot._domainEvents]
               │
     UnitOfWork.SaveChangesAsync()
               │
     OrderDbContext.SaveChangesAsync()
-              ├─ Collect events from tracked entities
+              ├─ Collect events from tracked aggregate roots
               ├─ Clear events on entities
               ├─ base.SaveChangesAsync()  ← DB write
               └─ IDomainEventDispatcher.DispatchAsync()
