@@ -6,7 +6,7 @@ A practical implementation of Domain-Driven Design (DDD) tactical patterns with 
 
 This project demonstrates how to build a rich domain model using DDD principles with Entity Framework Core. The implementation focuses on the **Order Context** domain, showcasing how to properly structure entities, value objects, and their persistence using EF Core.
 
-> **Current Branch**: `repository-in-ef` - Complete implementation of Repository Pattern with Unit of Work
+> **Current Branch**: `main` - Complete implementation of Domain Events
 
 ## 🚀 Getting Started
 
@@ -39,7 +39,7 @@ This educational project teaches DDD concepts step by step. Each concept is docu
 | 3 | **Aggregate** | ✅ | Cluster of objects as a unit | [Aggregate.md](./docs/Aggregate.md) |
 | 4 | **Domain Service** | ✅ | Cross-entity business logic | [DomainService.md](./docs/DomainService.md) |
 | 5 | **Repository** | ✅ | Data access abstraction | [Repository.md](./docs/Repository.md) |
-| 6 | **Domain Event** | 🔲 | Decoupled communication | [DomainEvent.md](./docs/DomainEvent.md) |
+| 6 | **Domain Event** | ✅ | Decoupled domain communication | [DomainEvent.md](./docs/DomainEvent.md) |
 
 ## 🏗️ Project Architecture
 
@@ -78,6 +78,11 @@ This project implements the **three core DDD layers**. The Presentation layer is
 │  │  Services/               Common/            └── IUnitOfWork          │    │
 │  │  └── ClientRegistration  └── ValueObject                             │    │
 │  │  └── ClientTransfer      └── DomainException                         │    │
+│  │                           └── IDomainEvent                           │    │
+│  │  Events/                  └── IDomainEventHandler                    │    │
+│  │  └── ClientRegistered     └── IDomainEventDispatcher                 │    │
+│  │  └── ClientEmailChanged   └── Entity (base class)                    │    │
+│  │  └── ClientNameChanged                                               │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                     ▲                                        │
 │                          Implements │                                        │
@@ -85,10 +90,10 @@ This project implements the **three core DDD layers**. The Presentation layer is
 │                        INFRASTRUCTURE LAYER                                  │
 │                     OrderContext.Infrastructure                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │  Repositories/               Services/            Configurations/    │    │
-│  │  └── Repository<T,TId>       └── EmailUniqueness  └── ClientConfig   │    │
+│  │  Repositories/               Services/                Configurations/ │    │
+│  │  └── Repository<T,TId>       └── EmailUniqueness    └── ClientConfig │    │
 │  │  └── ClientRepository            Checker                             │    │
-│  │  └── UnitOfWork                                                      │    │
+│  │  └── UnitOfWork               └── DomainEventDispatcher              │    │
 │  │  OrderDbContext.cs           DependencyInjection.cs                  │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                     │                                        │
@@ -150,12 +155,15 @@ Step 3: EmailExistsAsync() ─────────────────�
                               │◄─────────────────────── Returns: false ──────│
                               │                        │                     │
 Step 4: Client.Create() ─────────────────────────────▶│ Creates Aggregate   │
+                              │                        │ Raises DomainEvent  │
                               │                        │                     │
 Step 5: AddAsync(client) ────────────────────────────────────────────────────▶
                               │                                              │
 Step 6: SaveChangesAsync() ──────────────────────────────────────────────────▶
-                              │                                              │
+                              │                        │ Collect events      │
+                              │                        │ Save to DB          │
                               │◄─────────────────────── Persisted to DB ─────│
+                              │                        │ Dispatch events     │
                               ▼                        │                     │
 Step 7: return client.Id ◄────────────────────────────│                     │
 ```
@@ -169,6 +177,13 @@ Step 7: return client.Id ◄─────────────────�
 |-----------|---------|
 | `Client.cs` | Aggregate Root with encapsulated business logic |
 | `Email.cs` | Value Object with immutability and validation |
+| `Entity.cs` | Base class that holds domain events |
+| `IDomainEvent` | Marker interface for all domain events |
+| `IDomainEventHandler<T>` | Generic handler contract |
+| `IDomainEventDispatcher` | Dispatcher abstraction (DI-friendly) |
+| `ClientRegisteredEvent` | Raised on `Client.Create()` |
+| `ClientEmailChangedEvent` | Raised on `client.UpdateEmail()` |
+| `ClientNameChangedEvent` | Raised on `client.UpdateName()` |
 | `IRepository<T,TId>` | Generic repository interface |
 | `IClientRepository` | Client-specific repository interface |
 | `IUnitOfWork` | Transaction management interface |
@@ -190,11 +205,12 @@ Step 7: return client.Id ◄─────────────────�
 | `Repository<T,TId>` | Generic EF Core repository |
 | `ClientRepository` | Client-specific implementation |
 | `UnitOfWork` | Transaction coordination |
-| `OrderDbContext` | EF Core DbContext |
+| `OrderDbContext` | EF Core DbContext — dispatches domain events post-save |
 | `ClientConfiguration` | Fluent API entity mapping |
 | `EmailUniquenessChecker` | Infrastructure service implementation |
+| `DomainEventDispatcher` | Resolves and invokes handlers from DI |
 
-### Tests (103 tests)
+### Tests (111 tests)
 | Test Class | Coverage |
 |------------|----------|
 | `ClientTest.cs` | Entity behavior |
@@ -205,6 +221,7 @@ Step 7: return client.Id ◄─────────────────�
 | `ClientRegistrationServiceTests.cs` | Domain service |
 | `ClientTransferServiceTests.cs` | Domain service |
 | `ClientConfigurationTests.cs` | EF Core mapping |
+| `DomainEventTests.cs` | Domain event raising and dispatching |
 
 ## ✅ Design Patterns & Best Practices
 
@@ -217,6 +234,8 @@ Step 7: return client.Id ◄─────────────────�
 | Aggregate | `Client` as Aggregate Root |
 | Value Object | `Email` immutable type |
 | Domain Service | `ClientRegistrationService`, `ClientTransferService` |
+| Domain Event | `ClientRegisteredEvent`, `ClientEmailChangedEvent`, `ClientNameChangedEvent` |
+| Observer | `IDomainEventHandler<T>` — multiple handlers per event |
 | Dependency Injection | Interface-based loose coupling |
 
 ### Best Practices Demonstrated
@@ -230,6 +249,7 @@ Step 7: return client.Id ◄─────────────────�
 8. **Aggregate Design** - Small aggregates, reference by ID
 9. **Interface Segregation** - Interfaces in Domain, implementations in Infrastructure
 10. **DTOs** - Data transfer objects for layer boundaries
+11. **Domain Events** - Decoupled side-effects raised by aggregates, dispatched post-save
 
 ## 📚 Resources
 
