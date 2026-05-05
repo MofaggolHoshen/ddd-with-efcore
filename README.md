@@ -81,8 +81,10 @@ This project implements the **three core DDD layers**. The Presentation layer is
 │  │                           └── IDomainEvent                           │    │
 │  │  Events/                  └── IDomainEventHandler                    │    │
 │  │  └── ClientRegistered     └── IDomainEventDispatcher                 │    │
-│  │  └── ClientEmailChanged   └── Entity (base class)                    │    │
-│  │  └── ClientNameChanged                                               │    │
+│  │  └── ClientEmailChanged   └── Entity<TId> (identity base class)      │    │
+│  │  └── ClientNameChanged    └── IAggregateRoot                          │    │
+│  │                           └── AggregateRoot<TId>                      │    │
+│  │                                                                     │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                     ▲                                        │
 │                          Implements │                                        │
@@ -177,7 +179,9 @@ Step 7: return client.Id ◄─────────────────�
 |-----------|---------|
 | `Client.cs` | Aggregate Root with encapsulated business logic |
 | `Email.cs` | Value Object with immutability and validation |
-| `Entity.cs` | Base class that holds domain events |
+| `Entity.cs` | Generic identity-based entity base (`Entity<TId>`) |
+| `IAggregateRoot.cs` | Marker contract for aggregate roots with domain events |
+| `AggregateRoot.cs` | Base class for aggregate roots that hold domain events |
 | `IDomainEvent` | Marker interface for all domain events |
 | `IDomainEventHandler<T>` | Generic handler contract |
 | `IDomainEventDispatcher` | Dispatcher abstraction (DI-friendly) |
