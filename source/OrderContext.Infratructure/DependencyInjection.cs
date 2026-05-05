@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OrderContext.Domain.Common;
 using OrderContext.Domain.Repositories;
 using OrderContext.Infratructure.Repositories;
+using OrderContext.Infratructure.Services;
 
 namespace OrderContext.Infratructure;
 
@@ -23,6 +25,9 @@ public static class DependencyInjection
         // Register DbContext with Sqlite
         services.AddDbContext<OrderDbContext>(options =>
             options.UseSqlite(connectionString));
+
+        // Register Domain Event Dispatcher
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
         // Register Repositories
         services.AddScoped<IClientRepository, ClientRepository>();
@@ -46,6 +51,9 @@ public static class DependencyInjection
         // Register DbContext with custom options
         services.AddDbContext<OrderDbContext>(optionsAction);
 
+        // Register Domain Event Dispatcher
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+
         // Register Repositories
         services.AddScoped<IClientRepository, ClientRepository>();
 
@@ -68,6 +76,9 @@ public static class DependencyInjection
         // Register DbContext with InMemory database
         services.AddDbContext<OrderDbContext>(options =>
             options.UseInMemoryDatabase(databaseName));
+
+        // Register Domain Event Dispatcher
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
         // Register Repositories
         services.AddScoped<IClientRepository, ClientRepository>();
