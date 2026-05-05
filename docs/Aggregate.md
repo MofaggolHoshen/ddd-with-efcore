@@ -124,10 +124,10 @@ The `Client` entity owns and protects the `Email` value object:
 
 ```csharp
 // OrderContext.Domain/Client.cs
-public class Client
+public class Client : AggregateRoot<Guid>
 {
     [Key]
-    public Guid Id { get; private set; } 
+    public override Guid Id { get; protected set; }
     public string Name { get; private set; }
     public Email Email { get; private set; }  // Value Object
     public DateTime CreatedAt { get; private set; }
@@ -140,6 +140,7 @@ public class Client
         Name = name;
         Email = email;
         CreatedAt = DateTime.UtcNow;
+        RaiseDomainEvent(new ClientRegisteredEvent(Id, Name, Email.Value));
     }
 
     private Client(string name, Email email)
@@ -163,13 +164,34 @@ public class Client
     {
         if (string.IsNullOrWhiteSpace(newName))
             throw new ArgumentException("Name cannot be empty!");
+        var oldName = Name;
         Name = newName;
+        RaiseDomainEvent(new ClientNameChangedEvent(Id, oldName, newName));
     }
 
     public void UpdateEmail(Email newEmail)
     {
-        Email = newEmail ?? throw new ArgumentNullException(nameof(newEmail));
+        if (newEmail == null)
+            throw new ArgumentNullException(nameof(newEmail));
+        var oldEmail = Email;
+        Email = newEmail;
+        RaiseDomainEvent(new ClientEmailChangedEvent(Id, oldEmail.Value, newEmail.Value));
     }
+}
+```
+
+The project also uses explicit aggregate root abstractions:
+
+```csharp
+public interface IAggregateRoot
+{
+    IReadOnlyList<IDomainEvent> DomainEvents { get; }
+    void ClearDomainEvents();
+}
+
+public abstract class AggregateRoot<TId> : Entity<TId>, IAggregateRoot where TId : notnull
+{
+    // event collection and RaiseDomainEvent(...)
 }
 ```
 

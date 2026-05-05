@@ -1,27 +1,38 @@
 namespace OrderContext.Domain.Common;
 
 /// <summary>
-/// Base class for all domain entities (and aggregate roots).
-/// Provides domain event collection management.
+/// Base class for domain entities.
 /// </summary>
-public abstract class Entity
+public abstract class Entity<TId> where TId : notnull
 {
-    private readonly List<IDomainEvent> _domainEvents = [];
+    public abstract TId Id { get; protected set; }
 
-    /// <summary>
-    /// The domain events raised by this entity since the last clear.
-    /// </summary>
-    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    public bool IsTransient()
+        => EqualityComparer<TId>.Default.Equals(Id, default!);
 
-    /// <summary>
-    /// Adds a domain event to the entity's internal event collection.
-    /// </summary>
-    protected void RaiseDomainEvent(IDomainEvent domainEvent)
-        => _domainEvents.Add(domainEvent);
+    public override bool Equals(object? obj)
+    {
+        if (obj is not Entity<TId> other)
+            return false;
 
-    /// <summary>
-    /// Clears all collected domain events. Called after events have been dispatched.
-    /// </summary>
-    public void ClearDomainEvents()
-        => _domainEvents.Clear();
+        if (ReferenceEquals(this, other))
+            return true;
+
+        if (GetType() != other.GetType())
+            return false;
+
+        if (IsTransient() || other.IsTransient())
+            return false;
+
+        return EqualityComparer<TId>.Default.Equals(Id, other.Id);
+    }
+
+    public override int GetHashCode()
+        => IsTransient() ? base.GetHashCode() : HashCode.Combine(GetType(), Id);
+
+    public static bool operator ==(Entity<TId>? left, Entity<TId>? right)
+        => Equals(left, right);
+
+    public static bool operator !=(Entity<TId>? left, Entity<TId>? right)
+        => !Equals(left, right);
 }

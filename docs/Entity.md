@@ -1,6 +1,6 @@
 # Entity in Domain-Driven Design
 
-> **Branch**: `entity-in-ef`  
+> **Branch**: `main`  
 > **Status**: ✅ Implemented
 
 ## 📖 What is an Entity?
@@ -30,11 +30,11 @@ An **Entity** is a domain object that has a **unique identity** that runs throug
 ### The Client Entity
 
 ```csharp
-public class Client
+public class Client : AggregateRoot<Guid>
 {
     // 1. IDENTITY - Unique identifier
     [Key]
-    public Guid Id { get; private set; }
+    public override Guid Id { get; protected set; }
 
     // 2. ATTRIBUTES - Mutable state
     public string Name { get; private set; }
@@ -53,6 +53,7 @@ public class Client
         Name = name;
         Email = email;
         CreatedAt = DateTime.UtcNow;
+        RaiseDomainEvent(new ClientRegisteredEvent(Id, Name, Email.Value));
     }
 
     private Client(string name, Email email)
@@ -78,12 +79,50 @@ public class Client
         if (string.IsNullOrWhiteSpace(newName))
             throw new ArgumentException("Name cannot be empty!");
 
+        var oldName = Name;
         Name = newName;
+        RaiseDomainEvent(new ClientNameChangedEvent(Id, oldName, newName));
     }
 
     public void UpdateEmail(Email newEmail)
     {
-        Email = newEmail ?? throw new ArgumentNullException(nameof(newEmail));
+        if (newEmail == null)
+            throw new ArgumentNullException(nameof(newEmail));
+
+        var oldEmail = Email;
+        Email = newEmail;
+        RaiseDomainEvent(new ClientEmailChangedEvent(Id, oldEmail.Value, newEmail.Value));
+    }
+}
+```
+
+### Base Entity Standard Used in This Project
+
+`Entity<TId>` centralizes identity semantics (transient detection and identity-based equality):
+
+```csharp
+public abstract class Entity<TId> where TId : notnull
+{
+    public abstract TId Id { get; protected set; }
+
+    public bool IsTransient()
+        => EqualityComparer<TId>.Default.Equals(Id, default!);
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is not Entity<TId> other)
+            return false;
+
+        if (ReferenceEquals(this, other))
+            return true;
+
+        if (GetType() != other.GetType())
+            return false;
+
+        if (IsTransient() || other.IsTransient())
+            return false;
+
+        return EqualityComparer<TId>.Default.Equals(Id, other.Id);
     }
 }
 ```
