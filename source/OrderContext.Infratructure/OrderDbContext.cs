@@ -28,13 +28,13 @@ public class OrderDbContext : DbContext
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Collect all pending domain events from tracked entities before saving
-        var entities = ChangeTracker.Entries()
-            .Select(e => e.Entity)
-            .OfType<IAggregateRoot>()
-            .Where(e => e.DomainEvents.Count > 0)
-            .ToList();
+        List<IAggregateRoot> entities = ChangeTracker.Entries()
+                                                    .Select(e => e.Entity)
+                                                    .OfType<IAggregateRoot>()
+                                                    .Where(e => e.DomainEvents.Count > 0)
+                                                    .ToList();
 
-        var domainEvents = entities
+        List<IDomainEvent> domainEvents = entities
             .SelectMany(e => e.DomainEvents)
             .ToList();
 
